@@ -19,6 +19,18 @@
             const data = await res.json();
 
             document.getElementById('qrcode').innerHTML = `<img src="data:image/png;base64, ${data.qrCode}">`
+
+            await checkStatus(data.reference);
+        }
+
+        let resolved = false;
+
+        async function checkStatus(reference) {
+           const res = await fetch(`/status?reference=${reference}`)
+            const status = await res.text();
+
+           if(status === 'APPROVED') window.location.href= '/dashboard';
+           else setTimeout(() => checkStatus(reference), 2000)
         }
 
         initLogin();

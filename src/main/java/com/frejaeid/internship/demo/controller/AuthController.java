@@ -1,11 +1,23 @@
 package com.frejaeid.internship.demo.controller;
 
+import com.verisec.frejaeid.client.beans.authentication.get.AuthenticationResult;
+import com.verisec.frejaeid.client.beans.authentication.get.AuthenticationResultRequest;
 import com.verisec.frejaeid.client.beans.authentication.init.InitiateAuthenticationRequest;
 import com.verisec.frejaeid.client.client.api.AuthenticationClientApi;
+import com.verisec.frejaeid.client.enums.TransactionStatus;
 import com.verisec.frejaeid.client.exceptions.FrejaEidClientInternalException;
+import com.verisec.frejaeid.client.exceptions.FrejaEidClientPollingException;
 import com.verisec.frejaeid.client.exceptions.FrejaEidException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -17,6 +29,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -55,6 +68,21 @@ public class AuthController {
         response.put("qrCode", qrBase64);
 
         return response;
+    }
+
+    @GetMapping("/status")
+    public String status(@RequestParam String reference, HttpServletRequest request) throws FrejaEidClientInternalException, FrejaEidClientPollingException, FrejaEidException {
+        AuthenticationResult result = authenticationClient.getResult(AuthenticationResultRequest.create(reference));
+
+        if(result.getStatus() == TransactionStatus.APPROVED) {
+            HttpSession session = request.getSession(true);
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken("user", null, List.of());
+            SecurityContextHolder.getContext().setAuthentication(auth);
+
+            session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());
+        }
+
+        return result.getStatus().name();
     }
 
 }
