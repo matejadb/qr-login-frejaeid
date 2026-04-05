@@ -44,8 +44,6 @@ public class AuthController {
     @PostMapping("/initiate")
     public Map<String, String> initiate() throws FrejaEidClientInternalException, FrejaEidException, IOException, InterruptedException {
         InitiateAuthenticationRequest request = InitiateAuthenticationRequest.createCustom().setInferred().build();
-//                .setEmail("mstankovicdb@gmail.com")
-//                .build();
 
         String reference = authenticationClient.initiate(request);
         String frejaLink = "https://app.test.frejaeid.com/freja?action=bindUserToTransaction&transactionReference=" + reference;
