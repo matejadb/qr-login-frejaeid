@@ -12,10 +12,11 @@ import org.springframework.context.annotation.Configuration;
 public class FrejaConfig {
     @Value("${freja.keystore.password}")
     private String keystorePassword;
+    @Value("${freja.keystore.path}")
+    private String keystorePath;
 
     @Bean
     public AuthenticationClientApi authenticationClientApi() throws Exception {
-        String keystorePath = new java.io.File(AuthenticationClientApi.class.getClassLoader().getResource("FREJA_BG_Intern_2026-04-02.pfx").toURI()).getAbsolutePath();
         String certPath = new java.io.File(AuthenticationClientApi.class.getClassLoader().getResource("freja_test_root_ca.crt").toURI()).getAbsolutePath();
 
         SslSettings sslSettings = SslSettings.create(keystorePath, keystorePassword, certPath);
