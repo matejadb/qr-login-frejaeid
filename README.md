@@ -1,4 +1,5 @@
 
+
 # Freja eID Demo
 
 A Spring Boot demo application integrating [Freja eID](https://frejaeid.com) authentication.
@@ -32,3 +33,21 @@ source .env && ./mvnw spring-boot:run
 ```
 
 The application will start on `http://localhost:8080`.
+
+## Logging
+
+The application uses [Log4j2](https://logging.apache.org/log4j/2.x/) configured via `src/main/resources/log4j2.xml`.
+
+Logs are written to two destinations:
+
+- **Console** — all output visible in the terminal
+- **`app.log`** — authentication events only, written to the project root.
+
+### What gets logged
+
+| Level | Event |
+|-------|-------|
+| `INFO` | Authentication initiated (includes transaction reference) |
+| `INFO` | Authentication approved |
+| `WARN` | Authentication ended with a non-approved status (e.g. `CANCELED`, `REJECTED`, `EXPIRED`) |
+| `ERROR` | Unexpected failure during authentication, with full stack trace |

@@ -32,10 +32,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 @RestController
 public class AuthController {
 
     private final AuthenticationClientApi authenticationClient;
+    private static final Logger logger = LogManager.getLogger(AuthController.class);
 
     public AuthController(AuthenticationClientApi authenticationClientApi) {
         this.authenticationClient = authenticationClientApi;
@@ -43,29 +47,41 @@ public class AuthController {
 
     @PostMapping("/initiate")
     public Map<String, String> initiate() throws FrejaEidClientInternalException, FrejaEidException, IOException, InterruptedException {
-        InitiateAuthenticationRequest request = InitiateAuthenticationRequest.createCustom().setInferred().build();
 
-        String reference = authenticationClient.initiate(request);
-        String frejaLink = "https://app.test.frejaeid.com/freja?action=bindUserToTransaction&transactionReference=" + reference;
-        String encodedLink = URLEncoder.encode(frejaLink, StandardCharsets.UTF_8);
-        String qrUrl = "https://resources.test.frejaeid.com/qrcode/generate?qrcodedata=" + encodedLink;
 
-        HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest httpRequest =
-                HttpRequest.newBuilder()
-                        .uri(URI.create(qrUrl))
-                        .GET()
-                        .build();
+        try {
+            InitiateAuthenticationRequest request = InitiateAuthenticationRequest.createCustom().setInferred().build();
 
-        HttpResponse<byte[]> qrResponse = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
-        byte[] qrBytes = qrResponse.body();
-        String qrBase64 = Base64.getEncoder().encodeToString(qrBytes);
+            String reference = authenticationClient.initiate(request);
 
-        Map<String, String> response = new HashMap<>();
-        response.put("reference", reference);
-        response.put("qrCode", qrBase64);
+            logger.info("Authentication initiated, reference={}", reference);
 
-        return response;
+            String frejaLink = "https://app.test.frejaeid.com/freja?action=bindUserToTransaction&transactionReference=" + reference;
+            String encodedLink = URLEncoder.encode(frejaLink, StandardCharsets.UTF_8);
+            String qrUrl = "https://resources.test.frejaeid.com/qrcode/generate?qrcodedata=" + encodedLink;
+
+            HttpClient httpClient = HttpClient.newHttpClient();
+            HttpRequest httpRequest =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(qrUrl))
+                            .GET()
+                            .build();
+
+            HttpResponse<byte[]> qrResponse = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
+            byte[] qrBytes = qrResponse.body();
+            String qrBase64 = Base64.getEncoder().encodeToString(qrBytes);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("reference", reference);
+            response.put("qrCode", qrBase64);
+
+            return response;
+
+        } catch (Exception e) {
+            logger.error("Failed to initiate authentication: ", e);
+            throw new RuntimeException(e);
+        }
+
     }
 
     @GetMapping("/status")
@@ -78,6 +94,12 @@ public class AuthController {
             SecurityContextHolder.getContext().setAuthentication(auth);
 
             session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());
+            logger.info("Authentication approved, status={}, reference={}", result.getStatus(), reference);
+        } else if(result.getStatus() == TransactionStatus.DELIVERED_TO_MOBILE){
+            logger.info("Authentication delivered to mobile, status={}, reference={}", result.getStatus(), reference);
+        } else if(result.getStatus() == TransactionStatus.CANCELED) {
+            logger.warn("Authentication not approved, status={}, reference={}", result.getStatus(), reference);
+            return null;
         }
 
         return result.getStatus().name();

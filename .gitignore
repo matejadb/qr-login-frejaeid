@@ -34,3 +34,4 @@ build/
 *.pfx
 FREJA_BG_Intern_2026-04-02.pfx
 .env
+app.log
