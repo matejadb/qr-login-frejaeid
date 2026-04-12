@@ -25,14 +25,18 @@
 
         let resolved = false;
 
-        async function checkStatus(reference) {
-           const res = await fetch(`/status?reference=${reference}`)
+        async function checkStatus(reference, delivered = false) {
+           const res = await fetch(`/status?reference=${reference}&delivered=${delivered}`)
             const status = await res.text();
 
            if(status === 'APPROVED') window.location.href= '/dashboard'
            else if(status === 'CANCELED' || status === 'REJECTED' || status === 'EXPIRED' )
                document.getElementById('qrcode').innerHTML = `<p>Authentication failed: ${status}</p>`;
-           else setTimeout(() => checkStatus(reference), 2000)
+           else {
+               if (status === 'DELIVERED_TO_MOBILE')
+                   document.getElementById('qrcode').innerHTML = `<p>Request delivered to mobile.</p>`;
+               setTimeout(() => checkStatus(reference, status === 'DELIVERED_TO_MOBILE'), 2000)
+           }
         }
 
         initLogin();

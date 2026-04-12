@@ -85,7 +85,7 @@ public class AuthController {
     }
 
     @GetMapping("/status")
-    public String status(@RequestParam String reference, HttpServletRequest request) throws FrejaEidClientInternalException, FrejaEidClientPollingException, FrejaEidException {
+    public String status(@RequestParam String reference, @RequestParam(defaultValue = "false") boolean delivered, HttpServletRequest request) throws FrejaEidClientInternalException, FrejaEidClientPollingException, FrejaEidException {
         AuthenticationResult result = authenticationClient.getResult(AuthenticationResultRequest.create(reference));
 
         if(result.getStatus() == TransactionStatus.APPROVED) {
@@ -95,11 +95,12 @@ public class AuthController {
 
             session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());
             logger.info("Authentication approved, status={}, reference={}", result.getStatus(), reference);
-        } else if(result.getStatus() == TransactionStatus.DELIVERED_TO_MOBILE){
-            logger.info("Authentication delivered to mobile, status={}, reference={}", result.getStatus(), reference);
-        } else if(result.getStatus() == TransactionStatus.CANCELED) {
+        } else if(result.getStatus() == TransactionStatus.DELIVERED_TO_MOBILE && !delivered) {
+            logger.info("Authentication request delivered to mobile, status={}, reference={}", result.getStatus(), reference);
+        } else if(result.getStatus() == TransactionStatus.CANCELED
+                || result.getStatus() == TransactionStatus.REJECTED
+                || result.getStatus() == TransactionStatus.EXPIRED) {
             logger.warn("Authentication not approved, status={}, reference={}", result.getStatus(), reference);
-            return null;
         }
 
         return result.getStatus().name();
